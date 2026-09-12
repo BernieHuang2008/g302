@@ -4,8 +4,9 @@ G302 是班级内部服务的主项目。当前包含 `filecenter` 文件中心�
 
 ## 功能
 
-- 访问 `/filecenter/` 使用文件中心。
+- 访问 `/filecenter/` 查看文件列表，访问 `/filecenter/upload` 上传文件。
 - 支持一次选择一个或多个文件。
+- 上传页支持拖拽选择文件、逐项移除待上传文件和上传进度显示。
 - 上传前可逐个编辑展示文件名。
 - 支持多选标签：语文、数学、英语、物理、化学、生物、答案、课件、试卷。
 - 文件保存到 `data/filecenter/uploads/`。
@@ -13,6 +14,7 @@ G302 是班级内部服务的主项目。当前包含 `filecenter` 文件中心�
 - 文件索引保存到 `data/filecenter/files.json`，使用 UTF-8 JSON。
 - 文件按周展示，从最新到最旧。最近三周标题为本周、上周、两周前，更早显示日期范围。
 - 支持按文件名、时间、标签搜索。
+- 点击文件名使用浏览器内置能力预览或下载，不由服务端强制下载。
 - 不提供删除接口。
 
 ## 本地运行
@@ -48,4 +50,4 @@ docker run -d --name g302 -p 8080:8080 -v ./data:/app/data g302
 - `GET /api/health`：主服务健康检查。
 - `GET /filecenter/api/files`：获取文件索引 JSON。
 - `POST /filecenter/api/upload`：上传文件，multipart 字段为 `files` 和 `metadata`。
-- `GET /filecenter/api/download/<file_id>`：下载指定文件。
+- `GET /filecenter/api/download/<file_id>`：以内联方式返回文件，由浏览器决定预览或下载。

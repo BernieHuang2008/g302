@@ -1,0 +1,15 @@
+services:
+  g302:
+    build: .
+    container_name: g302
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    networks:
+      - g302_bridge
+    restart: unless-stopped
+
+networks:
+  g302_bridge:
+    driver: bridge

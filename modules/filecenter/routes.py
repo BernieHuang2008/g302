@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import mimetypes
 from pathlib import Path
 
 from flask import Blueprint, abort, jsonify, request, send_file, send_from_directory
@@ -9,6 +10,25 @@ from .storage import ALLOWED_TAGS, get_file_path, get_file_record, load_index, s
 
 
 MODULE_DIR = Path(__file__).resolve().parent
+MIME_TYPES = {
+    ".pdf": "application/pdf",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".csv": "text/csv",
+    ".txt": "text/plain",
+    ".md": "text/markdown",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".mp4": "video/mp4",
+    ".mp3": "audio/mpeg",
+}
 
 filecenter_bp = Blueprint("filecenter", __name__)
 
@@ -16,6 +36,11 @@ filecenter_bp = Blueprint("filecenter", __name__)
 @filecenter_bp.get("/")
 def index():
     return send_from_directory(MODULE_DIR / "static", "index.html")
+
+
+@filecenter_bp.get("/upload")
+def upload_page():
+    return send_from_directory(MODULE_DIR / "static", "upload.html")
 
 
 @filecenter_bp.get("/static/<path:filename>")
@@ -58,8 +83,14 @@ def download(file_id: str):
     if not file_path.exists():
         abort(404)
 
+    download_name = str(record.get("displayName") or record.get("originalName") or file_path.name)
+    source_name = str(record.get("originalName") or download_name)
+    extension = Path(source_name).suffix.lower()
+    mimetype = MIME_TYPES.get(extension) or mimetypes.guess_type(source_name)[0] or "application/octet-stream"
+
     return send_file(
         file_path,
-        as_attachment=True,
-        download_name=str(record.get("displayName") or record.get("originalName") or file_path.name),
+        as_attachment=False,
+        download_name=download_name,
+        mimetype=mimetype,
     )

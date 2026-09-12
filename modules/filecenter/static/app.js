@@ -1,22 +1,40 @@
 const TAGS = ["语文", "数学", "英语", "物理", "化学", "生物", "答案", "课件", "试卷"];
+const SUBJECT_TAGS = ["语文", "数学", "英语", "物理", "化学", "生物"];
+const TAG_KEYS = {
+  语文: "chinese",
+  数学: "math",
+  英语: "english",
+  物理: "physics",
+  化学: "chemistry",
+  生物: "biology",
+  答案: "answer",
+  课件: "courseware",
+  试卷: "exam",
+};
+
+const FORMAT_DEFINITIONS = [
+  { extensions: ["pdf"], label: "PDF", className: "format-pdf" },
+  { extensions: ["ppt", "pptx", "pptm"], label: "PPT", className: "format-ppt" },
+  { extensions: ["doc", "docx", "docm"], label: "Word", className: "format-word" },
+  { extensions: ["xls", "xlsx", "xlsm", "csv"], label: "Excel", className: "format-excel" },
+  { extensions: ["txt", "md"], label: "TXT", className: "format-text" },
+  { extensions: ["zip", "rar", "7z"], label: "ZIP", className: "format-archive" },
+  { extensions: ["jpg", "jpeg", "png", "gif", "webp"], label: "IMG", className: "format-image" },
+  { extensions: ["mp4", "mov", "avi", "mkv"], label: "视频", className: "format-video" },
+  { extensions: ["mp3", "wav", "m4a", "flac"], label: "音频", className: "format-audio" },
+];
 
 const state = {
-  selectedFiles: [],
   uploadedFiles: [],
   activeTags: new Set(),
+  collapsedWeeks: new Set(),
   query: "",
 };
 
-const fileInput = document.querySelector("#fileInput");
-const selectedFiles = document.querySelector("#selectedFiles");
-const uploadForm = document.querySelector("#uploadForm");
-const uploadButton = document.querySelector("#uploadButton");
-const uploadStatus = document.querySelector("#uploadStatus");
 const searchInput = document.querySelector("#searchInput");
 const tagFilters = document.querySelector("#tagFilters");
 const timeline = document.querySelector("#timeline");
 const fileCount = document.querySelector("#fileCount");
-const template = document.querySelector("#fileEditorTemplate");
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -69,14 +87,38 @@ function weekTitle(weekStart) {
   return `${formatMonthDay(weekStart)} 到 ${formatMonthDay(addDays(weekStart, 6))}`;
 }
 
+function getFormatInfo(fileName) {
+  const extension = fileName?.split(".").pop()?.toLowerCase() || "";
+  return (
+    FORMAT_DEFINITIONS.find((definition) => definition.extensions.includes(extension)) || {
+      label: extension ? extension.slice(0, 5).toUpperCase() : "FILE",
+      className: "format-other",
+    }
+  );
+}
+
+function subjectKey(tags = []) {
+  const subject = SUBJECT_TAGS.find((tag) => tags.includes(tag));
+  return subject ? TAG_KEYS[subject] : "default";
+}
+
+function renderFormatIcon(fileName) {
+  const info = getFormatInfo(fileName);
+  const icon = document.createElement("span");
+  icon.className = `format-icon ${info.className}`;
+  icon.textContent = info.label;
+  icon.setAttribute("aria-label", `文件格式：${info.label}`);
+  return icon;
+}
+
 function renderTagFilters() {
   tagFilters.innerHTML = "";
   for (const tag of TAGS) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "tag-pill";
+    button.className = `tag-pill tag-${TAG_KEYS[tag]}`;
     button.textContent = tag;
-    button.ariaPressed = String(state.activeTags.has(tag));
+    button.setAttribute("aria-pressed", String(state.activeTags.has(tag)));
     button.addEventListener("click", () => {
       if (state.activeTags.has(tag)) {
         state.activeTags.delete(tag);
@@ -88,49 +130,6 @@ function renderTagFilters() {
     });
     tagFilters.append(button);
   }
-}
-
-function renderSelectedFiles() {
-  selectedFiles.innerHTML = "";
-  selectedFiles.classList.toggle("empty-state", state.selectedFiles.length === 0);
-  uploadButton.disabled = state.selectedFiles.length === 0;
-
-  if (state.selectedFiles.length === 0) {
-    selectedFiles.textContent = "还没有选择文件";
-    return;
-  }
-
-  state.selectedFiles.forEach((item) => {
-    const node = template.content.firstElementChild.cloneNode(true);
-    const nameInput = node.querySelector(".display-name");
-    const detail = node.querySelector(".file-detail");
-    const tagsWrap = node.querySelector(".editor-tags");
-
-    nameInput.value = item.displayName;
-    detail.textContent = `${item.file.name} · ${formatSize(item.file.size)}`;
-    nameInput.addEventListener("input", () => {
-      item.displayName = nameInput.value;
-    });
-
-    for (const tag of TAGS) {
-      const label = document.createElement("label");
-      label.className = "check-pill";
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = tag;
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) {
-          item.tags.add(tag);
-        } else {
-          item.tags.delete(tag);
-        }
-      });
-      label.append(checkbox, document.createTextNode(tag));
-      tagsWrap.append(label);
-    }
-
-    selectedFiles.append(node);
-  });
 }
 
 function getFilteredFiles() {
@@ -158,11 +157,43 @@ function groupByWeek(files) {
     const weekStart = startOfWeek(date);
     const key = sameWeekKey(date);
     if (!groups.has(key)) {
-      groups.set(key, { weekStart, files: [] });
+      groups.set(key, { key, weekStart, files: [] });
     }
     groups.get(key).files.push(file);
   }
   return [...groups.values()].sort((a, b) => b.weekStart - a.weekStart);
+}
+
+function renderFileCard(file) {
+  const article = document.createElement("article");
+  article.className = `file-card file-tint-${subjectKey(file.tags)}`;
+
+  const icon = renderFormatIcon(file.originalName || file.displayName);
+  const main = document.createElement("div");
+  main.className = "file-card-main";
+
+  const name = document.createElement("a");
+  name.href = `/filecenter/api/download/${encodeURIComponent(file.id)}`;
+  name.textContent = file.displayName || file.originalName;
+  name.className = "file-link";
+  name.title = "打开文件";
+
+  const detail = document.createElement("p");
+  detail.className = "file-detail";
+  detail.textContent = `${formatDateTime(file.uploadedAt)} · ${formatSize(file.size || 0)}`;
+  main.append(name, detail);
+
+  const tags = document.createElement("div");
+  tags.className = "tag-row file-tags";
+  for (const tag of file.tags || []) {
+    const badge = document.createElement("span");
+    badge.className = `tag-badge tag-${TAG_KEYS[tag]}`;
+    badge.textContent = tag;
+    tags.append(badge);
+  }
+
+  article.append(icon, main, tags);
+  return article;
 }
 
 function renderTimeline() {
@@ -179,41 +210,51 @@ function renderTimeline() {
   }
 
   for (const group of groupByWeek(files)) {
-    const section = document.createElement("section");
-    section.className = "week-block";
+    const week = document.createElement("section");
+    week.className = "timeline-week";
 
+    const node = document.createElement("button");
+    node.type = "button";
+    node.className = "week-node";
+    node.title = "折叠或展开这一周";
+    node.setAttribute("aria-label", `折叠或展开${weekTitle(group.weekStart)}的文件`);
+    node.setAttribute("aria-expanded", String(!state.collapsedWeeks.has(group.key)));
+
+    const content = document.createElement("div");
+    content.className = "week-content";
+
+    const header = document.createElement("div");
+    header.className = "week-header";
     const title = document.createElement("h2");
     title.textContent = weekTitle(group.weekStart);
-    section.append(title);
+    const count = document.createElement("span");
+    count.className = "week-count";
+    count.textContent = `${group.files.length} 个文件`;
+    header.append(title, count);
 
+    const filesWrap = document.createElement("div");
+    filesWrap.className = "week-files";
     for (const file of group.files) {
-      const article = document.createElement("article");
-      article.className = "file-card";
-
-      const main = document.createElement("div");
-      const name = document.createElement("a");
-      name.href = `/filecenter/api/download/${encodeURIComponent(file.id)}`;
-      name.textContent = file.displayName || file.originalName;
-      name.className = "file-link";
-
-      const detail = document.createElement("p");
-      detail.className = "file-detail";
-      detail.textContent = `${formatDateTime(file.uploadedAt)} · ${formatSize(file.size || 0)}`;
-      main.append(name, detail);
-
-      const tags = document.createElement("div");
-      tags.className = "tag-row";
-      for (const tag of file.tags || []) {
-        const badge = document.createElement("span");
-        badge.className = "tag-badge";
-        badge.textContent = tag;
-        tags.append(badge);
-      }
-
-      article.append(main, tags);
-      section.append(article);
+      filesWrap.append(renderFileCard(file));
     }
-    timeline.append(section);
+
+    if (state.collapsedWeeks.has(group.key)) {
+      week.classList.add("is-collapsed");
+      filesWrap.hidden = true;
+    }
+
+    node.addEventListener("click", () => {
+      if (state.collapsedWeeks.has(group.key)) {
+        state.collapsedWeeks.delete(group.key);
+      } else {
+        state.collapsedWeeks.add(group.key);
+      }
+      renderTimeline();
+    });
+
+    content.append(header, filesWrap);
+    week.append(node, content);
+    timeline.append(week);
   }
 }
 
@@ -225,58 +266,12 @@ async function loadFiles() {
   renderTimeline();
 }
 
-fileInput.addEventListener("change", () => {
-  state.selectedFiles = [...fileInput.files].map((file, index) => ({
-    key: `file-${index}`,
-    file,
-    displayName: file.name,
-    tags: new Set(),
-  }));
-  renderSelectedFiles();
-});
-
 searchInput.addEventListener("input", () => {
   state.query = searchInput.value;
   renderTimeline();
 });
 
-uploadForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (state.selectedFiles.length === 0) return;
-
-  uploadButton.disabled = true;
-  uploadStatus.textContent = "正在上传...";
-
-  const form = new FormData();
-  const metadata = state.selectedFiles.map((item) => {
-    form.append("files", item.file, item.file.name);
-    return {
-      key: "files",
-      displayName: item.displayName,
-      tags: [...item.tags],
-    };
-  });
-  form.append("metadata", JSON.stringify(metadata));
-
-  try {
-    const response = await fetch("/filecenter/api/upload", { method: "POST", body: form });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new Error(payload.error || "上传失败");
-    }
-    fileInput.value = "";
-    state.selectedFiles = [];
-    renderSelectedFiles();
-    uploadStatus.textContent = "上传完成";
-    await loadFiles();
-  } catch (error) {
-    uploadStatus.textContent = error.message;
-    uploadButton.disabled = false;
-  }
-});
-
 renderTagFilters();
-renderSelectedFiles();
 loadFiles().catch((error) => {
   timeline.innerHTML = `<section class="panel empty-timeline">${error.message}</section>`;
   fileCount.textContent = "同步失败";
