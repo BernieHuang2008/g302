@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>G302 文件中心</title>
+    <link rel="stylesheet" href="/filecenter/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">G302</p>
+          <h1>文件中心</h1>
+        </div>
+        <div class="health" id="fileCount">正在同步</div>
+      </section>
+
+      <section class="panel upload-panel">
+        <div class="panel-title">
+          <div>
+            <h2>上传文件</h2>
+            <p>可一次选择多个文件，上传前逐个确认名称和标签。</p>
+          </div>
+          <label class="file-button">
+            <input id="fileInput" type="file" multiple />
+            选择文件
+          </label>
+        </div>
+
+        <form id="uploadForm" class="upload-form">
+          <div id="selectedFiles" class="selected-files empty-state">还没有选择文件</div>
+          <div class="actions">
+            <button id="uploadButton" type="submit" disabled>上传到服务器</button>
+            <span id="uploadStatus" class="status-text"></span>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel filters">
+        <div class="search-wrap">
+          <label for="searchInput">搜索</label>
+          <input id="searchInput" type="search" placeholder="文件名、时间、标签" autocomplete="off" />
+        </div>
+        <div id="tagFilters" class="tag-row"></div>
+      </section>
+
+      <section id="timeline" class="timeline"></section>
+    </main>
+
+    <template id="fileEditorTemplate">
+      <article class="file-editor">
+        <div class="file-meta">
+          <span class="file-icon">文</span>
+          <div>
+            <label>文件名</label>
+            <input class="display-name" type="text" />
+            <p class="file-detail"></p>
+          </div>
+        </div>
+        <div class="tag-row editor-tags"></div>
+      </article>
+    </template>
+
+    <script src="/filecenter/static/app.js"></script>
+  </body>
+</html>
