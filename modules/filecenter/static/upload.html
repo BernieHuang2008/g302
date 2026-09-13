@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/filecenter/static/styles.css" />
   </head>
   <body>
-    <main class="shell">
+    <div class="shell">
       <header class="topbar">
         <div class="brand">
           <p class="eyebrow">G302</p>
@@ -58,9 +58,9 @@
           </div>
         </form>
       </section>
-    </main>
+    </div>
 
-    <template id="fileEditorTemplate">
+    <div id="fileEditorTemplate" class="file-editor-template">
       <article class="file-editor">
         <div class="file-meta">
           <span class="format-icon upload-format-icon" aria-hidden="true">FILE</span>
@@ -76,7 +76,7 @@
           <div class="tag-row editor-tags"></div>
         </div>
       </article>
-    </template>
+    </div>
 
     <script src="/filecenter/static/upload.js"></script>
   </body>

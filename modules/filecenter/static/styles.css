@@ -221,8 +221,9 @@ label {
 .tag-badge,
 .check-pill {
   min-height: 32px;
-  border-radius: 8px;
-  padding: 6px 10px;
+  margin: 0 6px 6px 0;
+  padding: 5px 10px;
+  border-radius: 16px;
   font-size: 14px;
 }
 
@@ -495,6 +496,10 @@ label {
 
 .upload-panel {
   padding: 20px;
+}
+
+.file-editor-template {
+  display: none;
 }
 
 .drop-zone {

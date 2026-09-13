@@ -96,7 +96,7 @@ function renderSelectedFiles() {
   }
 
   state.selectedFiles.forEach((item, index) => {
-    const node = template.content.firstElementChild.cloneNode(true);
+    const node = template.firstElementChild.cloneNode(true);
     node.classList.add(`file-tint-${subjectKey([...item.tags])}`);
     const icon = node.querySelector(".upload-format-icon");
     const info = getFormatInfo(item.file.name);
