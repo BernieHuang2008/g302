@@ -1,8 +1,4 @@
 const LIBRARIES = {
-  pdf: {
-    script: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
-    worker: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
-  },
   docx: {
     jszip: "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js",
     script: "https://cdn.jsdelivr.net/npm/docx-preview@0.3.3/dist/docx-preview.min.js",
@@ -26,15 +22,11 @@ const LIBRARIES = {
 
 const state = {
   record: null,
-  pdf: null,
-  pdfZoom: 1,
-  pdfPage: 1,
 };
 
 const previewFormat = document.querySelector("#previewFormat");
 const previewTitle = document.querySelector("#previewTitle");
 const previewMeta = document.querySelector("#previewMeta");
-const previewToolbar = document.querySelector("#previewToolbar");
 const previewLoading = document.querySelector("#previewLoading");
 const previewError = document.querySelector("#previewError");
 const previewContent = document.querySelector("#previewContent");
@@ -152,125 +144,6 @@ function renderMeta(record) {
   downloadLink.removeAttribute("aria-disabled");
 }
 
-function createToolbarButton(label, title, onClick) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.textContent = label;
-  button.title = title;
-  button.addEventListener("click", onClick);
-  return button;
-}
-
-function renderPdfToolbar() {
-  previewToolbar.hidden = false;
-  previewToolbar.innerHTML = "";
-
-  const pageGroup = document.createElement("div");
-  pageGroup.className = "preview-toolbar-group";
-  const previous = createToolbarButton("上一页", "跳到上一页", () => {
-    state.pdfPage = Math.max(1, state.pdfPage - 1);
-    scrollToPdfPage();
-    updatePdfToolbar();
-  });
-  previous.id = "pdfPrevious";
-  const pageStatus = document.createElement("span");
-  pageStatus.className = "preview-toolbar-status";
-  pageStatus.id = "pdfPageStatus";
-  const next = createToolbarButton("下一页", "跳到下一页", () => {
-    state.pdfPage = Math.min(state.pdf?.numPages || 1, state.pdfPage + 1);
-    scrollToPdfPage();
-    updatePdfToolbar();
-  });
-  next.id = "pdfNext";
-  pageGroup.append(previous, pageStatus, next);
-
-  const zoomGroup = document.createElement("div");
-  zoomGroup.className = "preview-toolbar-group";
-  zoomGroup.append(
-    createToolbarButton("−", "缩小", () => changePdfZoom(-0.1)),
-    createToolbarButton("适宽", "适合当前窗口宽度", () => {
-      state.pdfZoom = 1;
-      renderPdfPages();
-    }),
-    createToolbarButton("+", "放大", () => changePdfZoom(0.1)),
-  );
-
-  previewToolbar.append(pageGroup, zoomGroup);
-  updatePdfToolbar();
-}
-
-function updatePdfToolbar() {
-  const pageStatus = document.querySelector("#pdfPageStatus");
-  const previous = document.querySelector("#pdfPrevious");
-  const next = document.querySelector("#pdfNext");
-  if (!pageStatus || !previous || !next || !state.pdf) return;
-  pageStatus.textContent = `${state.pdfPage} / ${state.pdf.numPages}`;
-  previous.disabled = state.pdfPage <= 1;
-  next.disabled = state.pdfPage >= state.pdf.numPages;
-}
-
-function changePdfZoom(delta) {
-  state.pdfZoom = Math.min(2, Math.max(0.6, state.pdfZoom + delta));
-  renderPdfPages();
-}
-
-function getPdfScale(page) {
-  const baseViewport = page.getViewport({ scale: 1 });
-  const availableWidth = Math.max(280, previewContent.clientWidth - 36);
-  const fitScale = availableWidth / baseViewport.width;
-  return Math.min(1.5, fitScale) * state.pdfZoom;
-}
-
-function scrollToPdfPage() {
-  const page = previewContent.querySelector(`[data-page="${state.pdfPage}"]`);
-  page?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-async function renderPdfPages() {
-  if (!state.pdf) return;
-  showContent("pdf-host");
-  renderPdfToolbar();
-
-  for (let pageNumber = 1; pageNumber <= state.pdf.numPages; pageNumber += 1) {
-    const page = await state.pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: getPdfScale(page) });
-    const wrapper = document.createElement("section");
-    wrapper.className = "pdf-page";
-    wrapper.dataset.page = String(pageNumber);
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.floor(viewport.width * pixelRatio);
-    canvas.height = Math.floor(viewport.height * pixelRatio);
-    canvas.style.width = `${viewport.width}px`;
-    canvas.style.height = `${viewport.height}px`;
-    wrapper.append(canvas);
-    previewContent.append(wrapper);
-
-    await page.render({
-      canvasContext: context,
-      viewport,
-      transform: pixelRatio === 1 ? undefined : [pixelRatio, 0, 0, pixelRatio, 0, 0],
-    }).promise;
-  }
-
-  updatePdfToolbar();
-}
-
-async function renderPdf(url) {
-  await loadScript(LIBRARIES.pdf.script);
-  if (!window.pdfjsLib) throw new Error("PDF 预览组件没有正确加载");
-  window.pdfjsLib.GlobalWorkerOptions.workerSrc = LIBRARIES.pdf.worker;
-
-  const response = await fetch(url);
-  if (!response.ok) throw new Error("读取 PDF 文件失败");
-  const data = await response.arrayBuffer();
-  state.pdf = await window.pdfjsLib.getDocument({ data }).promise;
-  state.pdfPage = 1;
-  state.pdfZoom = 1;
-  await renderPdfPages();
-}
-
 async function renderDocx(url) {
   await loadScript(LIBRARIES.docx.jszip);
   await loadScript(LIBRARIES.docx.script);
@@ -327,7 +200,6 @@ async function renderPptx(url) {
 }
 
 async function renderUnsupported(record) {
-  previewToolbar.hidden = true;
   showError(
     "暂不支持在线预览",
     `${record.originalName} 属于旧版或当前未接入的文件格式，请下载原文件后使用本地办公软件打开。`,
@@ -348,7 +220,8 @@ async function loadPreview() {
   const extension = getExtension(state.record.originalName);
   const url = contentUrl(state.record.id);
   if (extension === "pdf") {
-    await renderPdf(url);
+    window.location.replace(`/filecenter/static/pdfjs/web/viewer.html?${new URLSearchParams({ file: url })}`);
+    return;
   } else if (["docx", "docm"].includes(extension)) {
     await renderDocx(url);
   } else if (["pptx", "pptm"].includes(extension)) {

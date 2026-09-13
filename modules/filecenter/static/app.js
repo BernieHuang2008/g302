@@ -37,6 +37,28 @@ const tagFilters = document.querySelector("#tagFilters");
 const timeline = document.querySelector("#timeline");
 const fileCount = document.querySelector("#fileCount");
 
+timeline.addEventListener("click", (event) => {
+  const node = event.target.closest(".week-node");
+  if (!node || !timeline.contains(node)) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const week = node.closest(".timeline-week");
+  const filesWrap = document.getElementById(node.getAttribute("aria-controls"));
+  if (!week || !filesWrap) return;
+
+  const collapsed = !week.classList.contains("is-collapsed");
+  week.classList.toggle("is-collapsed", collapsed);
+  filesWrap.hidden = collapsed;
+  node.setAttribute("aria-expanded", String(!collapsed));
+  if (collapsed) {
+    state.collapsedWeeks.add(node.dataset.weekKey);
+  } else {
+    state.collapsedWeeks.delete(node.dataset.weekKey);
+  }
+});
+
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -174,6 +196,9 @@ function groupByWeek(files) {
 function renderFileCard(file) {
   const a = document.createElement("a");
   a.href = `/filecenter/preview/${encodeURIComponent(file.id)}`;
+  a.className = "file-card-link";
+  a.title = "预览文件";
+  a.setAttribute("aria-label", `预览文件：${file.displayName || file.originalName}`);
 
   const article = document.createElement("article");
   article.className = `file-card file-tint-${subjectKey(file.tags)}`;
@@ -185,7 +210,6 @@ function renderFileCard(file) {
   const name = document.createElement("span");
   name.textContent = file.displayName || file.originalName;
   name.className = "file-link";
-  name.title = "预览文件";
 
   const detail = document.createElement("p");
   detail.className = "file-detail";
@@ -257,18 +281,6 @@ function renderTimeline() {
       week.classList.add("is-collapsed");
     }
     filesWrap.hidden = isCollapsed;
-
-    node.addEventListener("click", () => {
-      const collapsed = !state.collapsedWeeks.has(group.key);
-      if (collapsed) {
-        state.collapsedWeeks.add(group.key);
-      } else {
-        state.collapsedWeeks.delete(group.key);
-      }
-      week.classList.toggle("is-collapsed", collapsed);
-      filesWrap.hidden = collapsed;
-      node.setAttribute("aria-expanded", String(!collapsed));
-    });
 
     content.append(header, filesWrap);
     week.append(node, content);

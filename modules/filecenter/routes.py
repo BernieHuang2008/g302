@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import mimetypes
 from pathlib import Path
+from urllib.parse import urlencode
 
-from flask import Blueprint, abort, jsonify, request, send_file, send_from_directory
+from flask import Blueprint, abort, jsonify, redirect, request, send_file, send_from_directory, url_for
 
 from .storage import ALLOWED_TAGS, get_file_path, get_file_record, load_index, save_files
 
@@ -47,8 +48,14 @@ def upload_page():
 
 @filecenter_bp.get("/preview/<file_id>")
 def preview_page(file_id: str):
-    if get_file_record(file_id) is None:
+    record = get_file_record(file_id)
+    if record is None:
         abort(404)
+    extension = Path(str(record.get("originalName") or "")).suffix.lower()
+    if extension == ".pdf":
+        viewer_url = url_for("filecenter.static_file", filename="pdfjs/web/viewer.html")
+        content_url = url_for("filecenter.content", file_id=file_id)
+        return redirect(f"{viewer_url}?{urlencode({'file': content_url})}")
     return send_from_directory(MODULE_DIR / "static", "preview.html")
 
 

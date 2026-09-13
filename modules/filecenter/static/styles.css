@@ -382,6 +382,24 @@ label {
   background: var(--tint-default);
 }
 
+.file-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.file-card-link:hover,
+.file-card-link:visited,
+.file-card-link:active {
+  color: inherit;
+  text-decoration: none;
+}
+
+.file-card-link:focus-visible {
+  outline: 3px solid hsl(216 42% 68% / 0.42);
+  outline-offset: 3px;
+}
+
 .file-tint-chinese {
   background: var(--tint-chinese);
 }
@@ -471,10 +489,11 @@ label {
   font-weight: 700;
   text-decoration: none;
   overflow-wrap: anywhere;
+  transition: color 160ms ease;
 }
 
 .file-link:hover {
-  color: hsl(228 48% 44%);
+  color: hsl(216 42% 52%);
 }
 
 .file-detail {
@@ -707,49 +726,6 @@ label {
   overflow-wrap: anywhere;
 }
 
-.preview-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.preview-toolbar-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--white);
-}
-
-.preview-toolbar button {
-  min-width: 40px;
-  min-height: 34px;
-  padding: 0 10px;
-  border-color: transparent;
-  background: transparent;
-}
-
-.preview-toolbar button:hover:not(:disabled),
-.preview-toolbar button:focus-visible {
-  border-color: var(--line);
-  background: var(--tint-math);
-}
-
-.preview-toolbar button:disabled {
-  opacity: 0.4;
-}
-
-.preview-toolbar-status {
-  min-width: 74px;
-  color: var(--muted);
-  font-size: 14px;
-  text-align: center;
-}
-
 .preview-viewport {
   min-height: 70vh;
   border: 1px solid var(--line);
@@ -785,27 +761,6 @@ label {
 
 .preview-content {
   min-height: 70vh;
-}
-
-.pdf-host {
-  display: grid;
-  justify-items: center;
-  gap: 18px;
-  padding: 18px;
-  overflow: auto;
-}
-
-.pdf-page {
-  max-width: 100%;
-  overflow: hidden;
-  background: white;
-  box-shadow: 0 8px 24px hsl(220 20% 40% / 0.16);
-}
-
-.pdf-page canvas {
-  display: block;
-  max-width: 100%;
-  height: auto;
 }
 
 .docx-host {
@@ -909,15 +864,6 @@ label {
     align-self: end;
   }
 
-  .preview-toolbar-group {
-    flex: 1 1 auto;
-  }
-
-  .preview-toolbar-group button {
-    flex: 1;
-  }
-
-  .pdf-host,
   .docx-host,
   .pptx-host {
     padding: 10px;
