@@ -7,6 +7,16 @@
     <link rel="stylesheet" href="/filecenter/static/styles.css" />
   </head>
   <body class="office-preview-page">
+    <header class="preview-actionbar">
+      <a class="button button-secondary preview-back" href="/filecenter/">返回</a>
+      <div class="preview-file-info">
+        <h1 id="previewTitle">正在读取文件...</h1>
+        <div class="preview-tags" id="previewTags" hidden></div>
+      </div>
+      <a id="downloadLink" class="button button-primary preview-download" href="#" aria-disabled="true">
+        下载
+      </a>
+    </header>
     <main class="office-preview-app" aria-live="polite">
       <section class="office-preview-state" id="previewLoading">
         <div>正在加载预览...</div>

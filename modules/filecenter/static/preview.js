@@ -24,9 +24,24 @@ const state = {
   record: null,
 };
 
+const TAG_KEYS = {
+  语文: "chinese",
+  数学: "math",
+  英语: "english",
+  物理: "physics",
+  化学: "chemistry",
+  生物: "biology",
+  答案: "answer",
+  课件: "courseware",
+  试卷: "exam",
+};
+
+const previewTitle = document.querySelector("#previewTitle");
+const previewTags = document.querySelector("#previewTags");
 const previewLoading = document.querySelector("#previewLoading");
 const previewError = document.querySelector("#previewError");
 const previewContent = document.querySelector("#previewContent");
+const downloadLink = document.querySelector("#downloadLink");
 const loadedScripts = new Map();
 const loadedStylesheets = new Set();
 
@@ -104,6 +119,33 @@ function showError(title, detail) {
   }
 }
 
+function renderActionbar(record) {
+  const fileName = record.displayName || record.originalName || "文件预览";
+  previewTitle.textContent = fileName;
+  document.title = `${fileName} - G302`;
+
+  downloadLink.href = downloadUrl(record.id);
+  downloadLink.removeAttribute("aria-disabled");
+
+  previewTags.innerHTML = "";
+  for (const tag of record.tags || []) {
+    const badge = document.createElement("span");
+    badge.className = `tag-badge tag-${TAG_KEYS[tag] || "default"}`;
+    badge.textContent = tag;
+    previewTags.append(badge);
+  }
+  previewTags.hidden = previewTags.childElementCount === 0;
+}
+
+function renderPdf(url) {
+  showContent("pdf-host");
+  const iframe = document.createElement("iframe");
+  iframe.className = "pdf-viewer-frame";
+  iframe.title = "PDF 预览";
+  iframe.src = `/filecenter/static/pdfjs/web/viewer.html?${new URLSearchParams({ file: url })}`;
+  previewContent.append(iframe);
+}
+
 async function renderDocx(url) {
   await loadScript(LIBRARIES.docx.jszip);
   await loadScript(LIBRARIES.docx.script);
@@ -176,14 +218,12 @@ async function loadPreview() {
   });
   if (!response.ok) throw new Error("文件不存在或已被移除");
   state.record = await response.json();
-
-  const fileName = state.record.displayName || state.record.originalName || "文件预览";
-  document.title = `${fileName} - G302`;
+  renderActionbar(state.record);
 
   const extension = getExtension(state.record.originalName);
   const url = contentUrl(state.record.id);
   if (extension === "pdf") {
-    window.location.replace(`/filecenter/static/pdfjs/web/viewer.html?${new URLSearchParams({ file: url })}`);
+    renderPdf(url);
   } else if (["docx", "docm"].includes(extension)) {
     await renderDocx(url);
   } else if (["pptx", "pptm"].includes(extension)) {
