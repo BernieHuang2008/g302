@@ -1,4 +1,4 @@
-const TAGS = ["语文", "数学", "英语", "物理", "化学", "生物", "答案", "课件", "试卷"];
+const TAGS = ["语文", "数学", "英语", "物理", "化学", "生物", "|", "答案", "课件", "试卷"];
 const SUBJECT_TAGS = ["语文", "数学", "英语", "物理", "化学", "生物"];
 const TAG_KEYS = {
   语文: "chinese",
@@ -11,6 +11,7 @@ const TAG_KEYS = {
   课件: "courseware",
   试卷: "exam",
 };
+const WEEK_FILES_PREFIX = "week-files-";
 
 const FORMAT_DEFINITIONS = [
   { extensions: ["pdf"], label: "PDF", className: "format-pdf" },
@@ -114,6 +115,12 @@ function renderFormatIcon(fileName) {
 function renderTagFilters() {
   tagFilters.innerHTML = "";
   for (const tag of TAGS) {
+    if (tag === "|") {
+      const separator = document.createElement("span");
+      separator.className = "tag-separator";
+      tagFilters.append(separator);
+      continue;
+    }
     const button = document.createElement("button");
     button.type = "button";
     button.className = `tag-pill tag-${TAG_KEYS[tag]}`;
@@ -145,7 +152,7 @@ function getFilteredFiles() {
       .toLowerCase();
     const queryMatched = !query || searchable.includes(query);
     const tagsMatched =
-      state.activeTags.size === 0 || [...state.activeTags].every((tag) => file.tags?.includes(tag));
+      state.activeTags.size === 0 || [...state.activeTags].some((tag) => file.tags?.includes(tag));
     return queryMatched && tagsMatched;
   });
 }
@@ -165,6 +172,9 @@ function groupByWeek(files) {
 }
 
 function renderFileCard(file) {
+  const a = document.createElement("a");
+  a.href = `/filecenter/preview/${encodeURIComponent(file.id)}`;
+
   const article = document.createElement("article");
   article.className = `file-card file-tint-${subjectKey(file.tags)}`;
 
@@ -172,11 +182,10 @@ function renderFileCard(file) {
   const main = document.createElement("div");
   main.className = "file-card-main";
 
-  const name = document.createElement("a");
-  name.href = `/filecenter/api/download/${encodeURIComponent(file.id)}`;
+  const name = document.createElement("span");
   name.textContent = file.displayName || file.originalName;
   name.className = "file-link";
-  name.title = "打开文件";
+  name.title = "预览文件";
 
   const detail = document.createElement("p");
   detail.className = "file-detail";
@@ -193,7 +202,9 @@ function renderFileCard(file) {
   }
 
   article.append(icon, main, tags);
-  return article;
+  a.append(article);
+
+  return a;
 }
 
 function renderTimeline() {
@@ -219,6 +230,7 @@ function renderTimeline() {
     node.title = "折叠或展开这一周";
     node.setAttribute("aria-label", `折叠或展开${weekTitle(group.weekStart)}的文件`);
     node.setAttribute("aria-expanded", String(!state.collapsedWeeks.has(group.key)));
+    node.dataset.weekKey = group.key;
 
     const content = document.createElement("div");
     content.className = "week-content";
@@ -234,22 +246,28 @@ function renderTimeline() {
 
     const filesWrap = document.createElement("div");
     filesWrap.className = "week-files";
+    filesWrap.id = `${WEEK_FILES_PREFIX}${group.key}`;
+    node.setAttribute("aria-controls", filesWrap.id);
     for (const file of group.files) {
       filesWrap.append(renderFileCard(file));
     }
 
-    if (state.collapsedWeeks.has(group.key)) {
+    const isCollapsed = state.collapsedWeeks.has(group.key);
+    if (isCollapsed) {
       week.classList.add("is-collapsed");
-      filesWrap.hidden = true;
     }
+    filesWrap.hidden = isCollapsed;
 
     node.addEventListener("click", () => {
-      if (state.collapsedWeeks.has(group.key)) {
-        state.collapsedWeeks.delete(group.key);
-      } else {
+      const collapsed = !state.collapsedWeeks.has(group.key);
+      if (collapsed) {
         state.collapsedWeeks.add(group.key);
+      } else {
+        state.collapsedWeeks.delete(group.key);
       }
-      renderTimeline();
+      week.classList.toggle("is-collapsed", collapsed);
+      filesWrap.hidden = collapsed;
+      node.setAttribute("aria-expanded", String(!collapsed));
     });
 
     content.append(header, filesWrap);

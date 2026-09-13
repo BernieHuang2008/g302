@@ -1,4 +1,4 @@
-const TAGS = ["语文", "数学", "英语", "物理", "化学", "生物", "答案", "课件", "试卷"];
+const TAGS = ["语文", "数学", "英语", "物理", "化学", "生物", "|", "答案", "课件", "试卷"];
 const SUBJECT_TAGS = ["语文", "数学", "英语", "物理", "化学", "生物"];
 const TAG_KEYS = {
   语文: "chinese",
@@ -11,6 +11,7 @@ const TAG_KEYS = {
   课件: "courseware",
   试卷: "exam",
 };
+const LAST_SUBJECTS_STORAGE_KEY = "g302:filecenter:last-subjects";
 
 const FORMAT_DEFINITIONS = [
   { extensions: ["pdf"], label: "PDF", className: "format-pdf" },
@@ -43,6 +44,25 @@ const progressStatus = document.querySelector("#progressStatus");
 const progressTrack = document.querySelector(".progress-track");
 const template = document.querySelector("#fileEditorTemplate");
 let dragDepth = 0;
+
+function getRememberedSubjects() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAST_SUBJECTS_STORAGE_KEY) || "[]");
+    if (!Array.isArray(saved)) return [];
+    return saved.filter((tag) => SUBJECT_TAGS.includes(tag));
+  } catch {
+    return [];
+  }
+}
+
+function rememberSubjects(tags) {
+  const subjects = SUBJECT_TAGS.filter((tag) => tags.includes(tag));
+  try {
+    localStorage.setItem(LAST_SUBJECTS_STORAGE_KEY, JSON.stringify(subjects));
+  } catch {
+    // Uploading should still work when browser storage is unavailable.
+  }
+}
 
 function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -79,7 +99,7 @@ function addFiles(files) {
     state.selectedFiles.push({
       file,
       displayName: file.name,
-      tags: new Set(),
+      tags: new Set(getRememberedSubjects()),
     });
   }
   renderSelectedFiles();
@@ -109,7 +129,7 @@ function renderSelectedFiles() {
     const tagsWrap = node.querySelector(".editor-tags");
     const removeButton = node.querySelector(".remove-file");
 
-    nameInput.value = item.displayName;
+    nameInput.value = item.displayName.replace(/(.+)\..*$/, '$1');  // remove extension
     nameInput.disabled = state.uploading;
     detail.textContent = `${item.file.name} · ${formatSize(item.file.size)}`;
     nameInput.addEventListener("input", () => {
@@ -123,6 +143,12 @@ function renderSelectedFiles() {
     });
 
     for (const tag of TAGS) {
+      if (tag === "|") {
+        const separator = document.createElement("span");
+        separator.className = "tag-separator";
+        tagsWrap.append(separator);
+        continue;
+      }
       const label = document.createElement("label");
       label.className = `check-pill tag-${TAG_KEYS[tag]}`;
       const checkbox = document.createElement("input");
@@ -187,6 +213,8 @@ function uploadFiles() {
     state.uploading = false;
     if (xhr.status >= 200 && xhr.status < 300) {
       const uploadedCount = state.selectedFiles.length;
+      const lastFile = state.selectedFiles[state.selectedFiles.length - 1];
+      if (lastFile) rememberSubjects([...lastFile.tags]);
       state.selectedFiles = [];
       renderSelectedFiles();
       setProgress(100, "上传完成");

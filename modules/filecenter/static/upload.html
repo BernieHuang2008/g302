@@ -15,17 +15,17 @@
           <p class="lede">先整理文件名和标签，再一次上传到班级文件中心。</p>
         </div>
         <div class="topbar-actions">
-          <a class="button button-secondary" href="/filecenter/">返回文件列表</a>
+          <a class="button button-secondary" href="/filecenter/">← 返回文件列表</a>
         </div>
       </header>
 
       <section id="dropArea" class="panel upload-panel">
         <div class="drop-zone" id="dropZone" tabindex="0">
-          <div class="drop-icon" aria-hidden="true">↑</div>
           <div>
             <h2>把文件拖到这里</h2>
             <p>也可以点击下面的按钮选择一个或多个文件</p>
           </div>
+          <br>
           <label class="button button-primary file-button">
             选择文件
             <input id="fileInput" type="file" multiple />
@@ -53,7 +53,7 @@
           </div>
 
           <div class="actions">
-            <button id="uploadButton" class="button button-primary" type="submit" disabled>上传到服务器</button>
+            <button id="uploadButton" class="button button-primary" type="submit" disabled>上传</button>
             <span id="uploadStatus" class="status-text" aria-live="polite"></span>
           </div>
         </form>
