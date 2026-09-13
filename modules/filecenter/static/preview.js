@@ -24,14 +24,11 @@ const state = {
   record: null,
 };
 
-const previewFormat = document.querySelector("#previewFormat");
-const previewTitle = document.querySelector("#previewTitle");
-const previewMeta = document.querySelector("#previewMeta");
 const previewLoading = document.querySelector("#previewLoading");
 const previewError = document.querySelector("#previewError");
 const previewContent = document.querySelector("#previewContent");
-const downloadLink = document.querySelector("#downloadLink");
 const loadedScripts = new Map();
+const loadedStylesheets = new Set();
 
 function getFileId() {
   const pathParts = window.location.pathname.split("/").filter(Boolean);
@@ -40,22 +37,6 @@ function getFileId() {
 
 function getExtension(fileName) {
   return fileName?.split(".").pop()?.toLowerCase() || "";
-}
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function formatDateTime(uploadedAt) {
-  return new Date(uploadedAt).toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function contentUrl(fileId) {
@@ -72,9 +53,9 @@ function loadScript(src) {
   const promise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = src;
-    script.async = false;
+    script.async = true;
     script.onload = resolve;
-    script.onerror = () => reject(new Error(`外部预览组件加载失败：${src}`));
+    script.onerror = () => reject(new Error(`预览组件加载失败：${src}`));
     document.head.append(script);
   });
   loadedScripts.set(src, promise);
@@ -82,22 +63,23 @@ function loadScript(src) {
 }
 
 function loadStylesheet(href) {
-  if (document.querySelector(`link[href="${href}"]`)) return;
+  if (loadedStylesheets.has(href)) return;
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.href = href;
   document.head.append(link);
+  loadedStylesheets.add(href);
 }
 
 function showContent(className) {
   previewLoading.hidden = true;
   previewError.hidden = true;
   previewContent.hidden = false;
-  previewContent.className = `preview-content ${className}`;
+  previewContent.className = `office-preview-content ${className}`;
   previewContent.innerHTML = "";
 }
 
-function showError(title, detail = "") {
+function showError(title, detail) {
   previewLoading.hidden = true;
   previewContent.hidden = true;
   previewError.hidden = false;
@@ -115,33 +97,11 @@ function showError(title, detail = "") {
 
   if (state.record) {
     const link = document.createElement("a");
-    link.className = "button button-secondary";
+    link.className = "button button-primary";
     link.href = downloadUrl(state.record.id);
     link.textContent = "下载原文件";
     previewError.append(link);
   }
-}
-
-function renderMeta(record) {
-  previewFormat.textContent = `${getExtension(record.originalName).toUpperCase() || "FILE"} 预览`;
-  previewTitle.textContent = record.displayName || record.originalName;
-  document.title = `${record.displayName || record.originalName} - G302`;
-
-  previewMeta.hidden = false;
-  previewMeta.innerHTML = "";
-  const details = [
-    `原始文件名：${record.originalName}`,
-    `上传于：${formatDateTime(record.uploadedAt)}`,
-    `大小：${formatSize(record.size || 0)}`,
-  ];
-  for (const detail of details) {
-    const item = document.createElement("span");
-    item.textContent = detail;
-    previewMeta.append(item);
-  }
-
-  downloadLink.href = downloadUrl(record.id);
-  downloadLink.removeAttribute("aria-disabled");
 }
 
 async function renderDocx(url) {
@@ -152,6 +112,7 @@ async function renderDocx(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error("读取 Word 文件失败");
   const data = await response.arrayBuffer();
+
   showContent("docx-host");
   await window.docx.renderAsync(data, previewContent, null, {
     className: "docx",
@@ -191,15 +152,15 @@ async function renderPptx(url) {
   previewContent.append(slidesResult);
   window.jQuery(slidesResult).pptxToHtml({
     pptxFileUrl: url,
-    slideMode: false,
-    keyBoardShortCut: false,
+    slideMode: true,
+    keyBoardShortCut: true,
     mediaProcess: true,
     themeProcess: true,
   });
   await waitForPptxRender();
 }
 
-async function renderUnsupported(record) {
+function renderUnsupported(record) {
   showError(
     "暂不支持在线预览",
     `${record.originalName} 属于旧版或当前未接入的文件格式，请下载原文件后使用本地办公软件打开。`,
@@ -215,19 +176,20 @@ async function loadPreview() {
   });
   if (!response.ok) throw new Error("文件不存在或已被移除");
   state.record = await response.json();
-  renderMeta(state.record);
+
+  const fileName = state.record.displayName || state.record.originalName || "文件预览";
+  document.title = `${fileName} - G302`;
 
   const extension = getExtension(state.record.originalName);
   const url = contentUrl(state.record.id);
   if (extension === "pdf") {
     window.location.replace(`/filecenter/static/pdfjs/web/viewer.html?${new URLSearchParams({ file: url })}`);
-    return;
   } else if (["docx", "docm"].includes(extension)) {
     await renderDocx(url);
   } else if (["pptx", "pptm"].includes(extension)) {
     await renderPptx(url);
   } else {
-    await renderUnsupported(state.record);
+    renderUnsupported(state.record);
   }
 }
 

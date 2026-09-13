@@ -37,17 +37,7 @@ const tagFilters = document.querySelector("#tagFilters");
 const timeline = document.querySelector("#timeline");
 const fileCount = document.querySelector("#fileCount");
 
-timeline.addEventListener("click", (event) => {
-  const node = event.target.closest(".week-node");
-  if (!node || !timeline.contains(node)) return;
-
-  event.preventDefault();
-  event.stopPropagation();
-
-  const week = node.closest(".timeline-week");
-  const filesWrap = document.getElementById(node.getAttribute("aria-controls"));
-  if (!week || !filesWrap) return;
-
+function toggleWeek(week, node, filesWrap) {
   const collapsed = !week.classList.contains("is-collapsed");
   week.classList.toggle("is-collapsed", collapsed);
   filesWrap.hidden = collapsed;
@@ -57,6 +47,21 @@ timeline.addEventListener("click", (event) => {
   } else {
     state.collapsedWeeks.delete(node.dataset.weekKey);
   }
+}
+
+timeline.addEventListener("click", (event) => {
+  const toggleTarget = event.target.closest(".week-node, .week-header");
+  if (!toggleTarget || !timeline.contains(toggleTarget)) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const week = toggleTarget.closest(".timeline-week");
+  const node = week?.querySelector(".week-node");
+  if (!week || !node) return;
+  const filesWrap = document.getElementById(node.getAttribute("aria-controls"));
+  if (!filesWrap) return;
+  toggleWeek(week, node, filesWrap);
 });
 
 function formatSize(bytes) {
@@ -261,6 +266,7 @@ function renderTimeline() {
 
     const header = document.createElement("div");
     header.className = "week-header";
+    header.title = "折叠或展开这一周";
     const title = document.createElement("h2");
     title.textContent = weekTitle(group.weekStart);
     const count = document.createElement("span");

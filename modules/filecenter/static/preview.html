@@ -6,34 +6,14 @@
     <title>文件预览 - G302</title>
     <link rel="stylesheet" href="/filecenter/static/styles.css" />
   </head>
-  <body class="preview-page">
-    <div class="preview-shell">
-      <header class="preview-topbar">
-        <a class="button button-secondary back-link" href="/filecenter/">← 文件列表</a>
-        <div class="preview-heading">
-          <p class="eyebrow" id="previewFormat">文件预览</p>
-          <h1 class="preview-title" id="previewTitle">正在读取文件...</h1>
-        </div>
-        <a
-          id="downloadLink"
-          class="button button-primary preview-download"
-          href="#"
-          aria-disabled="true"
-        >
-          下载文件
-        </a>
-      </header>
-
-      <div class="preview-meta" id="previewMeta" hidden></div>
-
-      <main class="preview-viewport" aria-live="polite">
-        <section class="preview-state" id="previewLoading">
-          <div>正在加载预览...</div>
-        </section>
-        <section class="preview-state preview-error" id="previewError" hidden></section>
-        <div class="preview-content" id="previewContent" hidden></div>
-      </main>
-    </div>
+  <body class="office-preview-page">
+    <main class="office-preview-app" aria-live="polite">
+      <section class="office-preview-state" id="previewLoading">
+        <div>正在加载预览...</div>
+      </section>
+      <section class="office-preview-state office-preview-error" id="previewError" hidden></section>
+      <div class="office-preview-content" id="previewContent" hidden></div>
+    </main>
 
     <script src="/filecenter/static/preview.js"></script>
   </body>
